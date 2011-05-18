@@ -1,0 +1,5 @@
+# $Id: trusted-hosts,v 1.3 2010-10-07 02:29:23 ak Exp $
+# 192.0.2.25		# gw.kyoto.example.jp/Kyoto, Japan
+# 192.0.2.29		# gw.wakkanai.example.jp/Hokkaido, Japan
+# 192.0.2.129		# gw.dallas.example.com/TX, U.S.A.
+# 172.16.0.0/24		# internal network

@@ -1,0 +1,533 @@
+#!/bin/sh
+# $Id: make-linux-iptables,v 1.11 2010-10-07 02:54:14 ak Exp $
+#  ___ ____ _____  _    ____  _     _____ ____  
+# |_ _|  _ \_   _|/ \  | __ )| |   | ____/ ___| 
+#  | || |_) || | / _ \ |  _ \| |   |  _| \___ \ 
+#  | ||  __/ | |/ ___ \| |_) | |___| |___ ___) |
+# |___|_|    |_/_/   \_\____/|_____|_____|____/ 
+#                                               
+export FIREWALL='/sbin/iptables'
+export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
+export LANG='C'
+export HERE=''
+export SCRIPT_ROOT="`dirname $0`"
+
+#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||F |||u |||n |||c |||t |||i |||o |||n |||s ||
+# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+test_firewall()
+{
+	if [ -x "$FIREWALL" ]; then
+		:
+	else
+		echo "${FIREWALL}: Command not found"
+		exit 1
+	fi
+}
+
+init_hostaddr()
+{
+	# Host lists
+	list_thishost="${SCRIPT_ROOT}/my-ipv4-address"
+	list_trustedh="${SCRIPT_ROOT}/trusted-hosts"
+	list_extroots="${SCRIPT_ROOT}/extroot-hosts"
+	list_monitors="${SCRIPT_ROOT}/monitor-hosts"
+	list_spammers="${SCRIPT_ROOT}/spammer-hosts"
+	list_attacker="${SCRIPT_ROOT}/attacker-hosts"
+	list_belogged="${SCRIPT_ROOT}/belogged-hosts"
+	list_policies="${SCRIPT_ROOT}/firewall-rules"
+
+	# Set this host IPv4 address
+	local file_thishost="${SCRIPT_ROOT}/my-ipv4-address"
+	local addr_thishost=''
+
+	if [ -r $file_thishost ]; then
+		addr_thishost="`grep '^[0-9A-Za-z]' $file_thishost | head -1 | awk '{print $1}'`"
+	fi
+
+	if [ -n "$addr_thishost" ]; then
+		HERE="$addr_thishost"
+	else
+		echo "$list_thishost is empty or invalid format"
+		exit 1
+	fi
+	
+	if [ -r "$list_policies" ]; then
+		. $list_policies
+	else
+		echo "Cannot read $list_thishost file"
+		exit 1
+	fi
+}
+
+to_multiport()
+{
+	local ports="`echo $1 | tr -s ' ' | tr ' ' ',' | sed -e 's/^,//g' -e 's/,$//g'`"
+	local mport=''
+	( echo $ports | grep ',' > /dev/null) && mport="$multiport $ports" || mport="--dport $ports"
+	echo $mport
+}
+
+make_firewall()
+{
+	local newstates='-m state --state NEW'
+	local multiport='-m multiport --dports'
+	local port=''
+
+	if [ "$USE_IP4_TCP_SYNCOOKIES" -eq "1" ]; then
+		# echo 'net.ipv4.tcp_syncookies=1' >> /etc/sysctl.conf
+		echo '1' > /proc/sys/net/ipv4/tcp_syncookies 2> /dev/null
+	fi
+
+	if [ "$IGNORE_ICMP_BROADCASTS" -eq "1" ]; then
+		# echo 'net.ipv4.icmp_echo_ignore_broadcasts=1' >> /etc/sysctl.conf
+		echo '1' > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts 2> /dev/null
+	fi
+
+	# Flush and delete
+	$FIREWALL --flush
+	$FIREWALL --delete-chain
+
+	# Default policies
+	$FIREWALL --policy INPUT DROP
+	$FIREWALL --policy OUTPUT ACCEPT
+	$FIREWALL --policy FORWARD DROP
+
+
+	# Allow all connections via loopback device
+	$FIREWALL -A INPUT --in-interface lo -j ACCEPT
+	$FIREWALL -A OUTPUT --out-interface lo -j ACCEPT
+
+	# Allow from this host to this host
+	$FIREWALL -A INPUT -s $HERE -d $HERE -j ACCEPT
+
+	# Logging
+	if [ -f "$list_belogged" ]; then
+		for L in `grep '^[0-9A-Za-z]' $list_belogged | awk '{print $1}'`; do
+			$FIREWALL -A INPUT -s $L -d $HERE -j LOG
+			$FIREWALL -A OUTPUT -s $HERE -d $L -j LOG
+		done
+	fi
+
+	# Statefull TCP Connections, reject ident protocol
+	$FIREWALL -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+	$FIREWALL -A INPUT -p tcp $newstates -m tcp --dport 113 -j REJECT --reject-with tcp-reset 
+
+
+	if [ "$DROP_IPFRAGMENT_PACKET" -eq "1" ]; then
+		$FIREWALL -A INPUT  --fragment -j DROP
+		$FIREWALL -A OUTPUT --fragment -j REJECT
+	fi
+
+	if [ "$DROP_IPMULTICASTPACKET" -eq "1" ]; then
+		$FIREWALL -A INPUT  -d 224.0.0.0/4 -j DROP
+		$FIREWALL -A OUTPUT -d 224.0.0.0/4 -j REJECT
+	fi
+
+	if [ "$DROP_NETBIOS_AND_DHSMB" -eq "1" ]; then
+		$FIREWALL -A INPUT  -p tcp -m multiport --dports 135:139,445 -j DROP
+		$FIREWALL -A INPUT  -p udp -m multiport --dports 135:139,445 -j DROP
+		$FIREWALL -A OUTPUT -p tcp -m multiport --dports 135:139,445 -j REJECT --reject-with tcp-reset
+		$FIREWALL -A OUTPUT -p udp -m multiport --dports 135:139,445 -j REJECT
+	fi
+
+
+	#  ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
+	# ||D |||N |||S |||       |||P |||a |||c |||k |||e |||t |||s ||
+	# ||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# DNS Query, Zone transfer
+	if [ -n "$port_dnsnamed" ]; then
+		$FIREWALL -A INPUT -p udp -d $HERE --dport $port_dnsnamed -j ACCEPT 
+		$FIREWALL -A INPUT -p tcp -d $HERE --dport $port_dnsnamed -j ACCEPT 
+	fi
+
+	#  ____ ____ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
+	# ||M |||o |||n |||i |||t |||o |||r |||i |||n |||g |||       |||H |||o |||s |||t |||s ||
+	# ||__|||__|||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Allow connections from monitoring hosts
+	if [ -f "$list_monitors" ]; then
+
+		for M in `grep '^[0-9A-Za-z]' $list_monitors | awk '{print $1}'`; do
+
+			if [ "$ALLOW_ANY_CONNECTION_FROM_MONITORHOSTS" -eq "0" ]; then
+
+				for P in $port_netsnmpd $port_muninsrv $port_zabbixds; do
+					port="`to_multiport $P`"
+					if [ -n "$port" ]; then
+						$FIREWALL -A INPUT -p tcp -s $M -d $HERE $port -j ACCEPT
+						$FIREWALL -A INPUT -p udp -s $M -d $HERE $port -j ACCEPT
+					fi
+				done
+
+				# Allow ping, traceroute, and other ICMP protocols
+				$FIREWALL -A INPUT -p icmp -s $M -d $HERE -j ACCEPT
+
+				# Other Services
+				for P in $port_monitors; do
+					port="`to_multiport $P`"
+					if [ -n "$port" ]; then
+						$FIREWALL -A INPUT -p tcp -s $M -d $HERE $port -j ACCEPT
+						$FIREWALL -A INPUT -p udp -s $M -d $HERE $port -j ACCEPT
+					fi
+				done
+			else
+				# Allow any connection from monitoring hosts
+				$FIREWALL -A INPUT -s $M -d $HERE -j ACCEPT
+			fi
+		done
+	fi
+
+	#  ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
+	# ||T |||r |||u |||s |||t |||e |||d |||       |||H |||o |||s |||t |||s ||
+	# ||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Allow connections from trusted hosts
+	if [ -f "$list_trustedh" ]; then
+
+		for T in `grep '^[0-9A-Za-z]' $list_trustedh | awk '{print $1}'`; do
+
+			if [ "$ALLOW_ANY_CONNECTION_FROM_TRUSTEDHOSTS" -eq "0" ]; then
+
+				#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
+				# ||R |||e |||m |||o |||t |||e |||       |||A |||d |||m |||i |||n ||
+				# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
+				# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
+				#
+				# Remote administration(CUI)
+				for P in $port_ftpdprog $port_opensshd $port_infinger; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				done
+
+				# Remote administration(GUI)
+				for P in $port_dellomsa $port_webminla $port_usermind; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				done
+
+				# File access protocols
+				for P in $port_smbdswat $port_cvspserv; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				done
+
+				# X11
+				if [ -n "$port_x11serv0" ]; then
+					port="`to_multiport $port_x11serv0`"
+					$FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				fi
+
+				if [ -n "$port_x11serv1" ]; then
+					port="`to_multiport $port_x11serv1`"
+					$FIREWALL -A INPUT -p udp $newstates -s $T -d $HERE $port -j ACCEPT
+				fi
+
+				# IRC
+				if [ -n "$port_ircdserv" ]; then
+					port="`to_multiport $port_ircdserv`"
+					$FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				fi
+
+				# Other TCP Protocols
+				for P in $port_ldapserv $port_ldapossl $port_tripwire $port_openvpnd; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				done
+
+				# RNDC
+				if [ -n "$port_bindrndc" ]; then
+					port="`to_multiport $bindrndc`"
+					$FIREWALL -A INPUT -p tcp -s $T -d $HERE $port -j ACCEPT
+				fi
+
+				# Other UDP protocols
+				for P in $port_netsnmpd $port_isaandkm $port_rsyslogd; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p udp -s $T -d $HERE $port -j ACCEPT
+				done
+				$FIREWALL -A INPUT -p icmp -s $T -d $HERE -j ACCEPT
+
+				#  ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ 
+				# ||M |||a |||i |||l |||b |||o |||x |||       |||A |||c |||c |||e |||s |||s ||
+				# ||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__||
+				# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|
+				#
+				# Mailbox, in case of that allow email access from your office.
+				for P in $port_pop3mail $port_imapmail $port_pop3ossl $port_imapossl $port_spamdsrv; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				done
+
+				#  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ 
+				# ||D |||a |||t |||a |||b |||a |||s |||e |||       |||A |||c |||c |||e |||s |||s ||
+				# ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__||
+				# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|
+				#
+				# Database
+				for P in $port_mysqlsrv $port_postgres $port_memcache; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				done
+
+				#  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ ____ 
+				# ||O |||t |||h |||e |||r |||       |||S |||e |||r |||v |||i |||c |||e |||s ||
+				# ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__|||__||
+				# |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+				#
+				# Other Services
+				for P in $port_trustedh; do
+					port="`to_multiport $P`"
+					if [ -n "$port" ]; then
+						$FIREWALL -A INPUT -p tcp -s $T -d $HERE $port -j ACCEPT
+						$FIREWALL -A INPUT -p udp -s $T -d $HERE $port -j ACCEPT
+					fi
+				done
+
+			else
+				# Allow any connection from trusted hosts
+				$FIREWALL -A INPUT -s $T -d $HERE -j ACCEPT
+			fi
+		done
+	fi
+
+	#  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ ____ ____ ____ 
+	# ||E |||x |||t |||e |||r |||n |||a |||l |||       |||S |||u |||p |||e |||r |||u |||s |||e |||r |||s ||
+	# ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Allow external superusers to login via ssh
+	if [ -f "$list_extroots" ]; then
+
+		for X in `grep '^[0-9A-Za-z]' $list_extroots | awk '{print $1}'`; do
+
+			if [ "$ALLOW_ANY_CONNECTION_FROM_EXTERNALROOT" -eq "0" ]; then
+
+				$FIREWALL -A INPUT -p icmp -s $X -d $HERE -j ACCEPT
+
+				for P in $port_opensshd $port_infinger; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $X -d $HERE $port -j ACCEPT
+				done
+
+				# Other Services
+				for P in $port_extroots; do
+					port="`to_multiport $P`"
+					if [ -n "$port" ]; then
+						$FIREWALL -A INPUT -p tcp -s $X -d $HERE $port -j ACCEPT
+						$FIREWALL -A INPUT -p udp -s $X -d $HERE $port -j ACCEPT
+					fi
+				done
+			else
+				# Allow any connection from external superuser
+				$FIREWALL -A INPUT -s $X -d $HERE -j ACCEPT
+			fi
+		done
+	fi
+
+	#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ ____ ____ 
+	# ||R |||e |||j |||e |||c |||t |||       |||A |||t |||t |||a |||c |||k |||e |||r |||s ||
+	# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Reject connections from attackers
+	if [ -f "$list_attacker" ]; then
+
+		for A in `grep '^[0-9A-Za-z]' $list_attacker | awk '{print $1}'`; do
+			#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
+			# ||R |||e |||m |||o |||t |||e |||       |||A |||d |||m |||i |||n ||
+			# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
+			# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
+			#
+			# Remote administration
+			for P in $port_ftpdprog $port_opensshd $port_infinger; do
+				port="`to_multiport $P`"
+				test -n "$port" && $FIREWALL -A INPUT -p tcp -s $A -d $HERE $port -j DROP
+			done
+			$FIREWALL -A INPUT -p icmp -s $A -d $HERE -j DROP
+
+			#  ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ 
+			# ||M |||a |||i |||l |||b |||o |||x |||       |||A |||c |||c |||e |||s |||s ||
+			# ||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__||
+			# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|
+			#
+			# Mailbox, in case of that allow email access from your office.
+			for P in $port_pop3mail $port_imapmail $port_pop3ossl $port_imapossl; do
+				port="`to_multiport $P`"
+				test -n "$port" && $FIREWALL -A INPUT -p tcp -s $A -d $HERE $port -j DROP
+			done
+		done
+	fi
+
+	#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ ____ 
+	# ||R |||e |||j |||e |||c |||t |||       |||S |||p |||a |||m |||m |||e |||r |||s ||
+	# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Reject connections from spammers(email,comment)
+	if [ -f "$list_spammers" ]; then
+		for S in `grep '^[0-9A-Za-z]' $list_spammers | awk '{print $1}'`; do
+			for P in $port_sendmail $port_httpdwww; do
+				port="`to_multiport $P`"
+				test -n "$port" && $FIREWALL -A INPUT -p tcp -s $S -d $HERE $port -j DROP
+			done
+		done
+	fi
+
+	#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ ____ 
+	# ||P |||u |||b |||l |||i |||c |||       |||S |||e |||r |||v |||i |||c |||e |||s ||
+	# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#  ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ 
+	# ||S |||M |||T |||P |||       |||S |||e |||r |||v |||e |||r ||
+	# ||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# SMTP Server
+	for P in $port_sendmail $port_smsubmit $port_smtpossl; do
+		port="`to_multiport $P`"
+		test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -d $HERE $port -j ACCEPT
+	done
+
+	#  ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ 
+	# ||W |||e |||b |||       |||S |||e |||r |||v |||e |||r ||
+	# ||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Web server
+	for P in $port_httpdwww $port_httpdssl; do
+		port="`to_multiport $P`"
+		test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -d $HERE $port -j ACCEPT
+	done
+
+	#  ____ ____ ____ ____ ____ ____ ____ ____ ____ 
+	# ||M |||a |||i |||l |||b |||o |||x |||e |||s ||
+	# ||__|||__|||__|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Mailboxes
+	for P in $port_pop3mail $port_imapmail $port_pop3ossl $port_imapossl; do
+		port="`to_multiport $P`"
+		test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -d $HERE $port -j ACCEPT
+	done
+
+	#  ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
+	# ||R |||e |||m |||o |||t |||e |||       |||L |||o |||g |||i |||n ||
+	# ||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Remote maintenance, file transfer from anywhere
+	if [ "$ALLOW_SSH_CONNECTION_FROM_WORLDWIDENET" -gt "0" -a -n "$port_opensshd" ]; then
+		port="`to_multiport $port_opensshd`"
+		$FIREWALL -A INPUT -p tcp $newstates -d $HERE $port -j ACCEPT
+	fi
+
+	# Web site developer? use scp or sftp
+	if [ "$ALLOW_FTP_CONNECTION_FROM_WORLDWIDENET" -gt "0" -a -n "$port_ftpdprog" ]; then
+		port="`to_multiport $port_ftpprog`"
+		$FIREWALL -A INPUT -p tcp $newstates -d $HERE $port -j ACCEPT
+	fi
+
+	# Other Services
+	for P in $port_anywhere; do
+		port="`to_multiport $P`"
+		if [ -n "$port" ]; then
+			$FIREWALL -A INPUT -p tcp -d $HERE $port -j ACCEPT
+			$FIREWALL -A INPUT -p udp -d $HERE $port -j ACCEPT
+		fi
+	done
+}
+
+open_firewall()
+{
+	$FIREWALL --flush
+	$FIREWALL --delete-chain
+	$FIREWALL --policy INPUT ACCEPT
+	$FIREWALL --policy OUTPUT ACCEPT
+	$FIREWALL --policy FORWARD ACCEPT
+}
+
+list_firewall()
+{
+	$FIREWALL -n -L --line-numbers
+}
+
+help_firewall()
+{
+	echo "Usage: "
+	echo " $0 [ OPTION [ARGV] ] COMMAND"
+	echo
+	echo "  OPTION:"
+	echo "   -f         : Allow ftp connections from anywhere"
+	echo "   -M         : Allow any connections from hosts defined in $list_monitors"
+	echo "   -s         : Allow ssh connections from anywhere"
+	echo "   -T         : Allow any connections from hosts defined in $list_trustedh"
+	echo "   -X         : Allow any connections from hosts defined in $list_extroots"
+	echo
+	echo "  COMMAND:"
+	echo "   help       : Print this screen"
+	echo "   open       : Open firewall widely: Accept any connection"
+	echo "   wall       : Set firewall: Execute firewall commands in this script"
+	exit 0
+}
+
+
+#  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ 
+# ||P |||a |||r |||s |||e |||       |||O |||p |||t |||i |||o |||n |||s ||
+# ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+init_hostaddr
+while getopts ":fMsTX" opt; do
+	case $opt in
+		f)
+			ALLOW_FTP_CONNECTION_FROM_WORLDWIDENET=1
+			;;
+		M)
+			ALLOW_ANY_CONNECTION_FROM_MONITORHOSTS=1
+			;;
+		s)
+			ALLOW_SSH_CONNECTION_FROM_WORLDWIDENET=1
+			;;
+		T)
+			ALLOW_ANY_CONNECTION_FROM_TRUSTEDHOSTS=1
+			;;
+		X)
+			ALLOW_ANY_CONNECTION_FROM_EXTERNALROOT=1
+			;;
+		\?|*)
+			;;
+	esac
+done
+shift `expr ${OPTIND} - 1`
+
+#  ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ ____ 
+# ||S |||u |||b |||       |||C |||o |||m |||m |||a |||n |||d |||s ||
+# ||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__|||__||
+# |/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+#
+case "$1" in
+	open)
+		test_firewall
+		open_firewall
+		;;
+
+	wall)
+		test_firewall
+		make_firewall
+		;;
+	list)
+		test_firewall
+		list_firewall
+		;;
+
+	help|*)
+		help_firewall
+esac
+

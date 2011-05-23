@@ -1,0 +1,24 @@
+$Id: README,v 1.2 2010/02/11 11:47:18 ak Exp $
+                                            
+ #####  ######   ##   ####   ##  ## ######  
+ ##  ## ##      ####  ## ##  ###### ##      
+ ##  ## ####   ##  ## ##  ## ###### ####    
+ #####  ##     ###### ##  ## ##  ## ##      
+ ## ##  ##     ##  ## ## ##  ##  ## ##      
+ ##  ## ###### ##  ## ####   ##  ## ######  
+                                            
+--------------------------------------------------------------------------------
+ firewall-scripts: Wrapper script for firewall command in each OS
+--------------------------------------------------------------------------------
+
+README ------------------- This file.
+attacker-hosts ----------- Hosts or Networks which attack this host.
+belogged-hosts ----------- Traffic from/to these hosts are logged.
+extroot-hosts ------------ External super users or developers.
+firewall-rules ----------- Policies of each internet services.
+make-linux-iptables ------ Wrapper script of firewall command.
+monitor-hosts ------------ External monitoring hosts, e.g.) ICMP, SNMP.
+my-ipv4-address ---------- This host's IPv4 address.
+spammer-hosts ------------ Email spammers(SMTP) and comment spammers(HTTP).
+trusted-hosts ------------ Your office gateway or network, or hosts in the same subnet.
+

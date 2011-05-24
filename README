@@ -8,7 +8,7 @@ $Id: README,v 1.2 2010/02/11 11:47:18 ak Exp $
  ##  ## ###### ##  ## ####   ##  ## ######  
                                             
 --------------------------------------------------------------------------------
- firewall-scripts: Wrapper script for firewall command in each OS
+ firewall-scripts: /sbin/iptables wrapper script for typical linux host on VPS.
 --------------------------------------------------------------------------------
 
 README ------------------- This file.

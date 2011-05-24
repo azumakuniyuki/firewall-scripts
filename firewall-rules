@@ -43,7 +43,7 @@ port_ftpdprog=21		# T:21		FTP(Control)
 #port_tripwire=1169		# T:1169	Tripwire
 #port_openvpnd=1194		# T:1194	OpenVPN
 #port_cvspserv=2401		# T:2401	CVS Pserver
-#port_ircdserv=6660,6661,6662,6663,6664,6665,6666,6667,6668,6669
+#port_ircdserv=6660:6669	# T:666?	IRC Server
 
 # * Email
 port_sendmail=25		# A:25		SMTP
@@ -51,7 +51,7 @@ port_pop3mail=110		# AT:110	POP3
 port_imapmail=143		# AT:143	IMAP4
 #port_smtpossl=465		# A:465		SMTP Over TLS/SSL
 port_smsubmit=587		# AT:587	Submission
-port_spamdsrv=783		# T:783		SpamAssassin, spamd
+#port_spamdsrv=783		# T:783		SpamAssassin, spamd
 port_imapossl=993		# AT:993	IMAP4 Over TLS/SSL
 port_pop3ossl=995		# AT:995	POP3 Over TLS/SSL
 

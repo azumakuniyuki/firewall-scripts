@@ -38,6 +38,7 @@ init_hostaddr()
 	list_attacker="${SCRIPT_ROOT}/attacker-hosts"
 	list_belogged="${SCRIPT_ROOT}/belogged-hosts"
 	list_policies="${SCRIPT_ROOT}/firewall-rules"
+	list_othercmd="${SCRIPT_ROOT}/other-commands"
 
 	# Set this host IPv4 address
 	local file_thishost="${SCRIPT_ROOT}/my-ipv4-address"
@@ -442,6 +443,13 @@ make_firewall()
 			$FIREWALL -A INPUT -p udp -d $HERE $port -j ACCEPT
 		fi
 	done
+
+	#  ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ ____ ____ ____ 
+	# ||O |||t |||h |||e |||r |||       |||C |||o |||m |||m |||a |||n |||d |||s ||
+	# ||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	#
+	test -f $list_othercmd && /bin/sh $list_othercmd
 }
 
 open_firewall()

@@ -1,0 +1,4 @@
+#!/bin/sh
+# $Id: other-commands,v 1.1 2010-02-11 12:38:01 ak Exp $
+export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
+export LANG='C'

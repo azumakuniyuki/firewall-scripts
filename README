@@ -19,6 +19,7 @@ firewall-rules ----------- Policies of each internet services.
 make-linux-iptables ------ Wrapper script of firewall command.
 monitor-hosts ------------ External monitoring hosts, e.g.) ICMP, SNMP.
 my-ipv4-address ---------- This host's IPv4 address.
+other-commands ----------- Other firewall commands, called from make-linux-iptables.
 spammer-hosts ------------ Email spammers(SMTP) and comment spammers(HTTP).
 trusted-hosts ------------ Your office gateway or network, or hosts in the same subnet.
 

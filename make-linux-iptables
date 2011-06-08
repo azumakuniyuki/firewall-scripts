@@ -158,7 +158,7 @@ make_firewall()
 
 			if [ "$ALLOW_ANY_CONNECTION_FROM_MONITORHOSTS" -eq "0" ]; then
 
-				for P in $port_netsnmpd $port_muninsrv $port_zabbixds; do
+				for P in $port_netsnmpd $port_muninsrv $port_zabbix; do
 					port="`to_multiport $P`"
 					if [ -n "$port" ]; then
 						$FIREWALL -A INPUT -p tcp -s $M -d $HERE $port -j ACCEPT
@@ -202,13 +202,13 @@ make_firewall()
 				# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
 				#
 				# Remote administration(CUI)
-				for P in $port_ftpdprog $port_opensshd $port_infinger; do
+				for P in $port_ftpctrl $port_opensshd $port_telnetd $port_fingerd; do
 					port="`to_multiport $P`"
 					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
 				done
 
 				# Remote administration(GUI)
-				for P in $port_dellomsa $port_webminla $port_usermind; do
+				for P in $port_dellomsa $port_webmin $port_usermin; do
 					port="`to_multiport $P`"
 					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
 				done
@@ -236,8 +236,14 @@ make_firewall()
 					$FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
 				fi
 
+				# Milters
+				for P in $port_clamavmilter $port_sidmilter $port_dkmilter $port_amavismilter; do
+					port="`to_multiport $P`"
+					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
+				done
+
 				# Other TCP Protocols
-				for P in $port_ldapserv $port_ldapossl $port_tripwire $port_openvpnd; do
+				for P in $port_ldapserv $port_ldapossl $port_tripwire $port_openvpnd $port_clamdsrv $port_squidproxy; do
 					port="`to_multiport $P`"
 					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
 				done
@@ -249,7 +255,7 @@ make_firewall()
 				fi
 
 				# Other UDP protocols
-				for P in $port_netsnmpd $port_isaandkm $port_rsyslogd; do
+				for P in $port_ftpdata $port_openntpd $port_netsnmpd $port_isaandkm $port_syslog; do
 					port="`to_multiport $P`"
 					test -n "$port" && $FIREWALL -A INPUT -p udp -s $T -d $HERE $port -j ACCEPT
 				done
@@ -272,7 +278,7 @@ make_firewall()
 				# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|
 				#
 				# Database
-				for P in $port_mysqlsrv $port_postgres $port_memcache; do
+				for P in $port_oramysql $port_postgres $port_memcached; do
 					port="`to_multiport $P`"
 					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
 				done
@@ -312,7 +318,7 @@ make_firewall()
 
 				$FIREWALL -A INPUT -p icmp -s $X -d $HERE -j ACCEPT
 
-				for P in $port_opensshd $port_infinger; do
+				for P in $port_opensshd $port_fingerd; do
 					port="`to_multiport $P`"
 					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $X -d $HERE $port -j ACCEPT
 				done
@@ -347,9 +353,13 @@ make_firewall()
 			# |/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
 			#
 			# Remote administration
-			for P in $port_ftpdprog $port_opensshd $port_infinger; do
+			for P in $port_ftpctrl $port_opensshd $port_fingerd; do
 				port="`to_multiport $P`"
 				test -n "$port" && $FIREWALL -A INPUT -p tcp -s $A -d $HERE $port -j DROP
+			done
+			for P in $port_ftpdata; do
+				port="`to_multiport $P`"
+				test -n "$port" && $FIREWALL -A INPUT -p udp -s $A -d $HERE $port -j DROP
 			done
 			$FIREWALL -A INPUT -p icmp -s $A -d $HERE -j DROP
 
@@ -430,9 +440,12 @@ make_firewall()
 	fi
 
 	# Web site developer? use scp or sftp
-	if [ "$ALLOW_FTP_CONNECTION_FROM_WORLDWIDENET" -gt "0" -a -n "$port_ftpdprog" ]; then
-		port="`to_multiport $port_ftpprog`"
+	if [ "$ALLOW_FTP_CONNECTION_FROM_WORLDWIDENET" -gt "0" -a -n "$port_ftpctrl" ]; then
+		port="`to_multiport $port_ftpctrl`"
 		$FIREWALL -A INPUT -p tcp $newstates -d $HERE $port -j ACCEPT
+
+		port="`to_multiport $port_ftpdata`"
+		$FIREWALL -A INPUT -p udp $newstates -d $HERE $port -j ACCEPT
 	fi
 
 	# Other Services

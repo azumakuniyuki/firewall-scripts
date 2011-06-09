@@ -391,33 +391,28 @@ list_firewall()
 	$FIREWALL -n -L --line-numbers
 }
 
-fiewall_insurance()
+firewall_insurance()
 {
+	cd $SCRIPT_ROOT
 	local current="`date '+%H %d %m *'`"
 	local minutex="`date '+%M'`"
-	local minutey="`expr $minutex + 5`"
-	local command=''
-
-	if [ "$SCRIPT_ROOT" = "." ]; then
-		command="`pwd`/`basename $0`"
-	else
-		command="${SCRIPT_ROOT}/`basename $0`"
-	fi
-
+	local minutey="`expr $minutex + 6`"
+	local command="`pwd`/`basename $0`"
+	echo "# Run ``crontab -e'' and paste the following lines:"
+	echo "# Make iptables open 6 minutes later"
 	echo "$minutey $current root $command open"
 }
 
 help_firewall()
 {
 	echo "Usage: "
-	echo " $0 [ OPTION [ARGV] ] COMMAND"
+	echo " $0 [ OPTION ] COMMAND"
 	echo
-	echo "  OPTION:"
-	echo "   -f         : Allow ftp connections from anywhere"
-	echo "   -M         : Allow any connections from hosts defined in $list_monitors"
-	echo "   -s         : Allow ssh connections from anywhere"
-	echo "   -T         : Allow any connections from hosts defined in $list_trustedh"
-	echo "   -X         : Allow any connections from hosts defined in $list_extroots"
+	echo "  OPTION: Overrides the value defined in $SCIRPT_ROOT/firewall-rules"
+	echo "   -a         : Deny any connection from hosts listed in $list_attacker"
+	echo "   -m         : Allow any connection from hosts listed in $list_monitors"
+	echo "   -t         : Allow any connection from hosts listed in $list_trustedh"
+	echo "   -x         : Allow any connection from hosts listed in $list_extroots"
 	echo
 	echo "  COMMAND:"
 	echo "   help       : Print this screen"
@@ -425,6 +420,7 @@ help_firewall()
 	echo "   wall       : Set firewall: Execute firewall commands in this script"
 	echo "   insurance  : Print crontab entry for firewall configuration failure"
 	echo "   version    : Print version"
+	echo
 	exit 0
 }
 
@@ -435,21 +431,18 @@ help_firewall()
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 init_hostaddr
-while getopts ":fMsTX" opt; do
+while getopts ":amtx" opt; do
 	case $opt in
-		f)
-			ALLOW_FTP_CONNECTION_FROM_WORLDWIDENET=1
+		a)
+			DENY_ANY_CONNECTION_FROM_ATTACKERHOSTS=1
 			;;
-		M)
+		m)
 			ALLOW_ANY_CONNECTION_FROM_MONITORHOSTS=1
 			;;
-		s)
-			ALLOW_SSH_CONNECTION_FROM_WORLDWIDENET=1
-			;;
-		T)
+		t)
 			ALLOW_ANY_CONNECTION_FROM_TRUSTEDHOSTS=1
 			;;
-		X)
+		x)
 			ALLOW_ANY_CONNECTION_FROM_EXTERNALROOT=1
 			;;
 		\?|*)

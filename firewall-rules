@@ -6,6 +6,7 @@ ALLOW_ANY_CONNECTION_FROM_EXTERNALROOT=0	# Allow any connections from ./extroot-
 ALLOW_ANY_CONNECTION_FROM_MONITORHOSTS=0	# Allow any connections from ./monitor-hosts
 ALLOW_SSH_CONNECTION_FROM_WORLDWIDENET=0
 ALLOW_FTP_CONNECTION_FROM_WORLDWIDENET=0
+DENY_ANY_CONNECTION_FROM_ATTACKERHOSTS=0	# Reject any connections from ./attacker-hosts
 
 USE_IP4_TCP_SYNCOOKIES=1
 IGNORE_ICMP_BROADCASTS=1
@@ -23,11 +24,6 @@ DROP_NETBIOS_AND_DHSMB=1
 port_opensshd=22		# TX:22		SSH(Default)
 #port_telnetd=23		# T:23		TELNET
 #port_fingerd=79		# TX:79		Finger
-#port_dellomsa=1311		# TX:1311	Dell OpenManage Server Administrator
-#port_x11serv0=6000		# TX:6000	X11(TCP)
-#port_x11serv1=6001		# TX:6001	X11(UDP)
-#port_webmin=10000		# TX:10000	Webmin
-#port_usermin=20000		# TX:20000	Usermin
 
 # Monitoring
 port_netsnmpd=161		# MT:161	SNMP(UDP)
@@ -38,17 +34,10 @@ port_netsnmpd=161		# MT:161	SNMP(UDP)
 port_dnsnamed=53		# A:53		DNS
 #port_bindrndc=953		# T:953		RNDC
 
-# * File, Log, Security, Messaging
+# * File, Log, Messaging
 #port_ftpdata=20		# T:20		FTP(Data)
 #port_ftpctrl=21		# T:21		FTP(Control)
-#port_syslog=514		# T:514		syslog(UDP)
-#port_smbdswat=901		# T:901		SWAT(Samba Web Administration Tool)
-#port_isaandkm=500		# T:500		ISAKMP(UDP)
-#port_tripwire=1169		# T:1169	Tripwire
-#port_openvpnd=1194		# T:1194	OpenVPN
-#port_cvspserv=2401		# T:2401	CVS Pserver
-#port_clamdsrv=3310		# T:3310	ClamAV/clamd
-#port_ircdserv=6660:6669	# T:666?	IRC Server
+#port_syslogd=514		# T:514		syslog(UDP)
 
 # * Email
 port_sendmail=25		# A:25		SMTP
@@ -56,35 +45,27 @@ port_pop3mail=110		# AT:110	POP3
 port_imapmail=143		# AT:143	IMAP4
 #port_smtpossl=465		# A:465		SMTP Over TLS/SSL
 port_smsubmit=587		# AT:587	Submission
-#port_spamdsrv=783		# T:783		SpamAssassin, spamd
 port_imapossl=993		# AT:993	IMAP4 Over TLS/SSL
 port_pop3ossl=995		# AT:995	POP3 Over TLS/SSL
-
-# * Milter programs
-#port_clamavmilter=7357		# T:7357	ClamAV-Milter
-#port_sidmilter=8891		# T:8891	sid-milter
-#port_dkmilter=8892		# T:8892	DomainKeys milter
-#port_amavismilter=10026	# T:10026	amavisd-milter
 
 # * Web
 port_httpdwww=80		# A:80		HTTP
 #port_httpdssl=443		# A:443		HTTP Over TLS/SSL
 
 # * Database
-#port_ldapserv=389		# T:389		LDAP
-#port_ldapossl=636		# T:636		LDAPS(LDAP over TLS/SSL)
 #port_oramysql=3306		# T:3306	MySQL
 #port_postgres=5432		# T:5432	PostgreSQL
 #port_memcached=11211		# T:11211	Memcached
 
-# * Others
-#port_openntpd=123		# T:123		NTP(UDP)
-#port_squidproxy=3192		# T:3192	Squid proxy
-
 # * Port numbers by group(trusted,monitors,anywhere)
-# 3192=squid, 5900=vnc, 123=ntpd
-#port_trustedh=3192,5500,5600,5900,11211'
-#port_monitors=4949,10050,10051
-#port_extroots=21,5900
-#port_anywhere=123
+#    clamav-milter=7357, sid-milter=8891, dk-milter=8892, anavisd-milter=10026
+#    webmin=10000, usermin=20000, dellomsa=1311, X11(tcp)=6000, X11(udp)=6001
+#    ldap=389, ldaps=636, swat=901, isakmp(udp)=500, tripwire=1169, openvpn=1194
+#    cvspserver=2401, clamd=3310, ntp(udp)=123, squid=3192, spamassassin=783,
+#    irc=6660:6669
+#
+#port_trustedh=901,1194,2401
+#port_monitors=123,6660:6669
+#port_extroots=3192
+#port_anywhere=123,2401
 

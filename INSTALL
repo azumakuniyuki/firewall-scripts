@@ -1,0 +1,50 @@
+$Id: INSTALL,v 1.2 2010/02/02 11:39:39 ak Exp $
+                                                
+  #### ##  ##  ##### ###### ##   ##     ##      
+   ##  ### ## ###      ##  ####  ##     ##      
+   ##  ######  ###     ## ##  ## ##     ##      
+   ##  ## ###   ###    ## ###### ##     ##      
+   ##  ##  ##    ###   ## ##  ## ##     ##      
+  #### ##  ## #####    ## ##  ## ###### ######  
+                                                
+             How to install and use firewall-scripts
+--------------------------------------------------------------------------------
+ * Run under Linux host (using /sbin/iptables)
+ * Optimized VPS/VDS host.
+--------------------------------------------------------------------------------
+
+ 01. Clone git repository
+
+      # cd /usr/local/src
+      # git clone git@github.com:azumakuniyuki/firewall-scripts.git
+
+--------------------------------------------------------------------------------
+ 02. Copy script files (For example /etc/firewall in this document)
+
+      # mkdir /etc/firewall
+      # cp -R ./firewall-scripts/* /etc/firewall
+      # chmod go-rwx /etc/firewall/*
+
+--------------------------------------------------------------------------------
+ 03. Edit some files
+
+      # cd /etc/firewall
+      # echo 'IPv4 address of your host' >> ./my-ipv4-address
+      # vi ./firewall-rules
+
+--------------------------------------------------------------------------------
+ 04. Start
+
+      # ./make-linux-iptables wall
+
+      * To see more information about the script, run make-linux-iptables help.
+
+--------------------------------------------------------------------------------
+ 05. Start iptables at system boot
+
+      * If you use CentOS
+      # /etc/rc.d/init.d/iptables save
+
+      * Ubuntu
+      # echo '/etc/firewall/make-linux-iptables wall' >> /etc/rc.local
+

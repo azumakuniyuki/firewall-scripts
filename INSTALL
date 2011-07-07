@@ -19,11 +19,11 @@ $Id: INSTALL,v 1.2 2010/02/02 11:39:39 ak Exp $
       # git clone git@github.com:azumakuniyuki/firewall-scripts.git
 
 --------------------------------------------------------------------------------
- 02. Copy script files (For example /etc/firewall in this document)
+ 02. Install
 
-      # mkdir /etc/firewall
-      # cp -R ./firewall-scripts/* /etc/firewall
-      # chmod go-rwx /etc/firewall/*
+      * Destination directory is /etc/firewall. If you want to install scripts
+        into other directory, Change FWDIR macro in ./Makefile .
+      # make install
 
 --------------------------------------------------------------------------------
  03. Edit some files

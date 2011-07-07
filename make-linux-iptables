@@ -6,7 +6,7 @@
 #  | ||  __/ | |/ ___ \| |_) | |___| |___ ___) |
 # |___|_|    |_/_/   \_\____/|_____|_____|____/ 
 #                                               
-VERSION='0.1.7'
+VERSION='0.1.8'
 export FIREWALL='/sbin/iptables'
 export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
 export LANG='C'

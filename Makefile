@@ -7,7 +7,6 @@
 # |_|  |_|\__,_|_|\_\___|_| |_|_|\___|
 # ---------------------------------------------------------------------------
 #
-SHELL	= /bin/sh
 FWDIR	= /etc/firewall
 SCRIPT	= make-linux-iptables
 FILES	= attacker-hosts belogged-hosts extroot-hosts firewall-rules \
@@ -21,3 +20,8 @@ install:
 	done
 	install -o root -g root -vpm 0744 $(SCRIPT) $(FWDIR)/
 	install -o root -g root -vpm 0444 README $(FWDIR)/
+
+diff:
+	@diff -u ./$(SCRIPT) $(FWDIR)/$(SCRIPT)
+	@diff -u ./firewall-rules $(FWDIR)/firewall-rules
+

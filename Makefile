@@ -9,19 +9,20 @@
 #
 FWDIR	= /etc/firewall
 SCRIPT	= make-linux-iptables
-FILES	= attacker-hosts belogged-hosts extroot-hosts firewall-rules \
-	  monitor-hosts my-ipv4-address other-commands spammer-hosts \
-	  trusted-hosts
+RULES	= firewall-rules
+FILES	= attacker-hosts belogged-hosts extroot-hosts monitor-hosts \
+	  my-ipv4-address other-commands spammer-hosts trusted-hosts
 
 install:
 	test -d $(FWDIR) || mkdir -pm 0700 $(FWDIR)
 	for F in $(FILES); do \
 		test -s $(FWDIR)/$$F || install -o root -g root -vpm 0644 $$F $(FWDIR)/ ;\
 	done
+	test -s $(FWDIR)/$(RULES) || install -o root -g root -vpm 0644 $(RULES) $(FWDIR)/ ;\
 	install -o root -g root -vpm 0744 $(SCRIPT) $(FWDIR)/
 	install -o root -g root -vpm 0444 README $(FWDIR)/
 
 diff:
-	@diff -u ./$(SCRIPT) $(FWDIR)/$(SCRIPT)
-	@diff -u ./firewall-rules $(FWDIR)/firewall-rules
+	@test -s $(FWDIR)/$(SCRIPT) && diff -u $(FWDIR)/$(SCRIPT) ./$(SCRIPT) 2> /dev/null
+	@test -s $(FWDIR)/$(RULES) && diff -u $(FWDIR)/$(RULES) ./$(RULES) 2> /dev/null
 

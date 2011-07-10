@@ -158,7 +158,7 @@ make_firewall()
 	if [ -f "$list_internal" ]; then
 
 		for I in `grep '^[0-9A-Za-z]' $list_internal | awk '{print $1}'`; do
-			$FIREWALL -A INPUT -s $I -d ! $HERE -j ACCEPT
+			$FIREWALL -A INPUT -s $I ! -d $HERE -j ACCEPT
 		done
 	fi
 

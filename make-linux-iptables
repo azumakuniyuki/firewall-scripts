@@ -6,7 +6,7 @@
 #  | ||  __/ | |/ ___ \| |_) | |___| |___ ___) |
 # |___|_|    |_/_/   \_\____/|_____|_____|____/ 
 #                                               
-VERSION='0.1.9'
+VERSION='0.2.0'
 export FIREWALL='/sbin/iptables'
 export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
 export LANG='C'
@@ -38,6 +38,7 @@ init_hostaddr()
 	list_spammers="${SCRIPT_ROOT}/spammer-hosts"
 	list_attacker="${SCRIPT_ROOT}/attacker-hosts"
 	list_belogged="${SCRIPT_ROOT}/belogged-hosts"
+	list_internal="${SCRIPT_ROOT}/internal-hosts"
 	list_policies="${SCRIPT_ROOT}/firewall-rules"
 	list_othercmd="${SCRIPT_ROOT}/other-commands"
 
@@ -145,6 +146,20 @@ make_firewall()
 	if [ -n "$port_dnsnamed" ]; then
 		$FIREWALL -A INPUT -p udp -d $HERE --dport $port_dnsnamed -j ACCEPT 
 		$FIREWALL -A INPUT -p tcp -d $HERE --dport $port_dnsnamed -j ACCEPT 
+	fi
+
+	#  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 
+	# ||I |||n |||t |||e |||r |||n |||a |||l |||       |||H |||o |||s |||t |||s ||
+	# ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__|||__|||__|||__|||__||
+	# |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|
+	#
+	# Allow any connection from internal hosts defined in the file,
+	# such as 10/8, 172.16/12, and 192.168/16.
+	if [ -f "$list_internal" ]; then
+
+		for I in `grep '^[0-9A-Za-z]' $list_internal | awk '{print $1}'`; do
+			$FIREWALL -A INPUT -s $I -d ! $HERE -j ACCEPT
+		done
 	fi
 
 	#  ____ ____ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ ____ ____ ____ ____ 

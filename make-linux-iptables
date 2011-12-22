@@ -6,7 +6,7 @@
 #  | ||  __/ | |/ ___ \| |_) | |___| |___ ___) |
 # |___|_|    |_/_/   \_\____/|_____|_____|____/ 
 #                                               
-VERSION='0.2.0'
+VERSION='0.2.1'
 export FIREWALL='/sbin/iptables'
 export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
 export LANG='C'
@@ -24,6 +24,16 @@ test_firewall()
 		:
 	else
 		echo "${FIREWALL}: Command not found"
+		exit 1
+	fi
+}
+
+dump_firewall()
+{
+	if [ -x "${FIREWALL}-save" ]; then
+		${FIREWALL}-save
+	else
+		echo "${FIREWALL}-save: Command not found"
 		exit 1
 	fi
 }
@@ -433,6 +443,8 @@ help_firewall()
 	echo "   help       : Print this screen"
 	echo "   open       : Open firewall widely: Accept any connection"
 	echo "   wall       : Set firewall: Execute firewall commands in this script"
+	echo "   list       : Print firewall rule list"
+	echo "   dump       : Print the results of ``iptables-save''"
 	echo "   insurance  : Print crontab entry for firewall configuration failure"
 	echo "   version    : Print version"
 	echo
@@ -484,6 +496,10 @@ case "$1" in
 	list)
 		test_firewall
 		list_firewall
+		;;
+	dump)
+		test_firewall
+		dump_firewall
 		;;
 	insurance|hoken)
 		firewall_insurance

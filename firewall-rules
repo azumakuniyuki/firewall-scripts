@@ -15,10 +15,10 @@ DROP_IPMULTICASTPACKET=1
 DROP_NETBIOS_AND_DHSMB=1
 
 # * Host Group
-#   T = Trusted hosts
-#   M = Monitoring hosts
-#   X = External superusers
-#   A = Anywhre
+#   T = Trusted hosts		./trusted-hosts
+#   M = Monitoring hosts	./monitor-hosts
+#   X = External superusers	./extroot-hosts
+#   A = Anywhere
 #
 # * Remote administration, Host Groups:Default Port
 port_opensshd=22		# TX:22		SSH(Default)
@@ -58,11 +58,28 @@ port_httpdwww=80		# A:80		HTTP
 #port_memcached=11211		# T:11211	Memcached
 
 # * Port numbers by group(trusted,monitors,anywhere)
-#    clamav-milter=7357, sid-milter=8891, dk-milter=8892, anavisd-milter=10026
-#    webmin=10000, usermin=20000, dellomsa=1311, X11(tcp)=6000, X11(udp)=6001
-#    ldap=389, ldaps=636, swat=901, isakmp(udp)=500, tripwire=1169, openvpn=1194
-#    cvspserver=2401, clamd=3310, ntp(udp)=123, squid=3192, spamassassin=783,
-#    irc=6660:6669
+#
+#    clamav-milter	7357
+#    sid-milter		8891
+#    dk-milter		8892
+#    anavisd-milter	10026
+#    webmin		10000
+#    usermin		20000
+#    dellomsa		1311
+#    X11(tcp)		6000
+#    X11(udp)		6001
+#    ldap		389
+#    ldaps		636
+#    swat		901
+#    isakmp(udp)	500
+#    tripwire		1169
+#    openvpn		1194
+#    cvspserver		2401
+#    clamd		3310
+#    ntp(udp)		123
+#    squid		3192
+#    spamassassin	783
+#    irc		6660:6669
 #
 #port_trustedh=901,1194,2401
 #port_monitors=123,6660:6669

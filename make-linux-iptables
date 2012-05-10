@@ -6,7 +6,7 @@
 #  | ||  __/ | |/ ___ \| |_) | |___| |___ ___) |
 # |___|_|    |_/_/   \_\____/|_____|_____|____/ 
 #                                               
-VERSION='0.2.3'
+VERSION='0.2.4'
 export FIREWALL='/sbin/iptables'
 export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
 export LANG='C'
@@ -419,13 +419,23 @@ list_firewall()
 firewall_insurance()
 {
 	cd $SCRIPT_ROOT
-	local current="`date '+%H %d %m *'`"
-	local minutex="`date '+%M'`"
-	local minutey="`expr $minutex + 6`"
-	local command="`pwd`/`basename $0`"
-	echo "# Run ``crontab -e'' and paste the following lines:"
+	local commands="`pwd`/`basename $0`"
+
+	echo "# Run 'crontab -e' and paste the following lines:"
 	echo "# Make iptables open 6 minutes later"
-	echo "$minutey $current root $command open"
+
+	if [ -n "`perldoc -l Time::Piece 2> /dev/null`" ]; then
+		local perlcomm=''
+		local crontabs=''
+		crontabs="`perl -MTime::Piece -lE 'my $t=Time::Piece->new(time+360);printf("%02d %02d %02d %02d",$t->minute,$t->hour,$t->mday,$t->mon);'`"
+		echo "$crontabs * root $commands open"
+	else
+		local current="`date '+%H %d %m *'`"
+		local minutex="`date '+%M'`"
+		local minutey="`expr $minutex + 6`"
+		local command="`pwd`/`basename $0`"
+		echo "$minutey $current root $commands open"
+	fi
 }
 
 help_firewall()

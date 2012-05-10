@@ -6,7 +6,7 @@
 #  | ||  __/ | |/ ___ \| |_) | |___| |___ ___) |
 # |___|_|    |_/_/   \_\____/|_____|_____|____/ 
 #                                               
-VERSION='0.2.4'
+VERSION='0.2.5'
 export FIREWALL='/sbin/iptables'
 export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
 export LANG='C'
@@ -443,7 +443,7 @@ help_firewall()
 	echo "Usage: "
 	echo " $0 [ OPTION ] COMMAND"
 	echo
-	echo "  OPTION: Overrides the value defined in $SCIRPT_ROOT/firewall-rules"
+	echo "  OPTION: Overrides the value defined in $SCRIPT_ROOT/firewall-rules"
 	echo "   -a         : Deny any connection from hosts listed in $list_attacker"
 	echo "   -m         : Allow any connection from hosts listed in $list_monitors"
 	echo "   -t         : Allow any connection from hosts listed in $list_trustedh"

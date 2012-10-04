@@ -6,7 +6,7 @@
 #  | ||  __/ | |/ ___ \| |_) | |___| |___ ___) |
 # |___|_|    |_/_/   \_\____/|_____|_____|____/ 
 #                                               
-VERSION='0.2.5'
+VERSION='0.2.6'
 export FIREWALL='/sbin/iptables'
 export PATH='/sbin:/usr/sbin:/bin:/usr/bin'
 export LANG='C'
@@ -400,12 +400,24 @@ make_firewall()
 	# |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 	#
 	test -f $list_othercmd && /bin/sh $list_othercmd
+
+	# Nice Idea !!! << http://qiita.com/items/5c4e21fa284497782f71
+	if [ -n "$DONOT_COMMIT_IMMEDIATELY_FIREWALL_RULE" ]; then
+		if [ "$DONOT_COMMIT_IMMEDIATELY_FIREWALL_RULE" -gt "0" ]; then
+			trap 'exit 0' 2
+			echo 'Open firewall after 30 seconds...'
+			sleep 30
+			echo 'Open firewall !'
+			open_firewall
+		fi
+	fi
 }
 
 open_firewall()
 {
 	$FIREWALL --flush
 	$FIREWALL --delete-chain
+	$FIREWALL --zero
 	$FIREWALL --policy INPUT ACCEPT
 	$FIREWALL --policy OUTPUT ACCEPT
 	$FIREWALL --policy FORWARD ACCEPT
@@ -449,6 +461,9 @@ help_firewall()
 	echo "   -t         : Allow any connection from hosts listed in $list_trustedh"
 	echo "   -x         : Allow any connection from hosts listed in $list_extroots"
 	echo
+	echo "   -d         : Do not commit immediately the new firewall rules"
+	echo "                If this option specified, firewall will open after 30 seconds"
+	echo
 	echo "  COMMAND:"
 	echo "   help       : Print this screen"
 	echo "   open       : Open firewall widely: Accept any connection"
@@ -468,10 +483,13 @@ help_firewall()
 # |/__\|/__\|/__\|/__\|/__\|/_______\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 #
 init_hostaddr
-while getopts ":amtx" opt; do
+while getopts ":admtx" opt; do
 	case $opt in
 		a)
 			DENY_ANY_CONNECTION_FROM_ATTACKERHOSTS=1
+			;;
+		d)
+			DONOT_COMMIT_IMMEDIATELY_FIREWALL_RULE=1
 			;;
 		m)
 			ALLOW_ANY_CONNECTION_FROM_MONITORHOSTS=1

@@ -242,7 +242,7 @@ make_firewall()
 				done
 
 				# Database
-				for P in $port_oramysql $port_postgres $port_memcached; do
+				for P in $port_oracledb $port_oramysql $port_postgres $port_memcache; do
 					port="`to_multiport $P`"
 					test -n "$port" && $FIREWALL -A INPUT -p tcp $newstates -s $T -d $HERE $port -j ACCEPT
 				done

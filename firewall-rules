@@ -55,9 +55,10 @@ port_httpdwww=80		# A:80		HTTP
 #port_httpdssl=443		# A:443		HTTP Over TLS/SSL
 
 # * Database
+#port_oracledb=1521		# T:1521	Oracle Database
 #port_oramysql=3306		# T:3306	MySQL
 #port_postgres=5432		# T:5432	PostgreSQL
-#port_memcached=11211		# T:11211	Memcached
+#port_memcache=11211		# T:11211	Memcached
 
 # * Port numbers by group(trusted,monitors,anywhere)
 #

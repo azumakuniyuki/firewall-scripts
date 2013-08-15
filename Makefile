@@ -1,4 +1,5 @@
 # $Id: Makefile,v 1.2 2009/04/29 13:55:29 ak Exp $
+# vim: ts=8
 # Makefile for firewall-scripts
 #  __  __       _         __ _ _      
 # |  \/  | __ _| | _____ / _(_) | ___ 

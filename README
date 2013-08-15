@@ -17,7 +17,8 @@ belogged-hosts ----------- Traffic from/to these hosts are logged.
 extroot-hosts ------------ External super users or developers.
 firewall-rules ----------- Policies of each internet services.
 internal-hosts ----------- Internal hosts such as 10/8, 172.16/12, and 192.168/16.
-make-linux-iptables ------ Wrapper script of firewall command.
+make-linux-iptables ------ Wrapper script of /sbin/iptables on Linux.
+make-freebsd-ipfw -------- Wrapper script of /sbin/ipfw on FreeBSD.
 monitor-hosts ------------ External monitoring hosts, e.g.) ICMP, SNMP.
 my-ipv4-address ---------- This host's IPv4 address.
 other-commands ----------- Other firewall commands, called from make-linux-iptables.
